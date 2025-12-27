@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="rw">
+<head>
+<meta charset="UTF-8">
+<title>Random Result Checker with History</title>
+<style>
+body{
+    font-family: Arial, sans-serif;
+    background:#eef2f5;
+    display:flex;
+    justify-content:center;
+    align-items:flex-start;
+    padding-top:50px;
+    min-height:100vh;
+}
+.container{
+    background:#fff;
+    padding:25px;
+    width:450px;
+    border-radius:8px;
+    box-shadow:0 0 10px rgba(0,0,0,0.1);
+}
+input,button{
+    width:100%;
+    padding:10px;
+    margin-top:10px;
+    font-size:16px;
+}
+button{
+    background:#28a745;
+    color:#fff;
+    border:none;
+    cursor:pointer;
+    transition: background 0.3s, transform 0.2s;
+}
+button:hover{
+    background:#218838;
+    transform: scale(1.05);
+}
+.result{
+    margin-top:15px;
+    font-weight:bold;
+    text-align:center;
+    font-size:24px;
+    opacity:0;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.result.show{
+    opacity:1;
+    transform: translateY(0);
+}
+.result.hide{
+    opacity:0;
+    transform: translateY(-10px);
+}
+h4{
+    margin-top:25px;
+}
+ul{
+    list-style-type:none;
+    padding-left:0;
+    max-height:250px;
+    overflow-y:auto;
+}
+li{
+    background:#f4f4f4;
+    margin-bottom:5px;
+    padding:5px 10px;
+    border-radius:4px;
+    font-size:14px;
+}
+.notice {
+    margin-top: 15px;
+    font-size: 14px;
+    color: #333;
+    text-align:center;
+}
+.reset-btn {
+    background:#dc3545;
+    margin-top:10px;
+}
+.reset-btn:hover {
+    background:#c82333;
+    transform: scale(1.05);
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h3>Shyiramo Umubare</h3>
+    <input type="number" step="any" id="num" placeholder="ex: 900.04">
+    <button onclick="check()">Reba ayo watsindiye</button>
+    <button class="reset-btn" onclick="resetApp()">Siba byose</button>
+    <div class="result" id="res"></div>
+    <div class="notice">Twandikire kuri 0792522881 uhabwe umubare</div>
+
+    <h4>Amateka y'Ibisubizo</h4>
+    <ul id="historyList"></ul>
+</div>
+
+<script>
+// Umubare n’ibisubizo by’ibanze
+const allNumbers = [
+900.04,900.9,900.11,900.31,
+800.32,800.17,800.15,800.12,800.03,800.51,
+700.19,700.20,700.10,700.06,
+600.14,600.17,600.39,600.42,600.11,600.01,
+500.16,500.22,500.17,500.11,500.08,
+400.87,400.61,400.13,400.21,400.31,
+300.13,300.18,300.23,300.09,300.015,
+200.021,200.40,200.69,200.9,200.30,200.80,200.56,200.67,
+100.01,100.65,100.09,100.81,100.21,100.31,100
+];
+
+const baseResults = [
+1,2,3,0,0,0,1,2,1,1,
+1,1,0,2,2,2,2,2,3,3
+];
+
+// Fungura mapping ihamye (buri number ifite result imwe)
+let mapping = JSON.parse(localStorage.getItem('mapping')) || {};
+if(Object.keys(mapping).length === 0){
+    allNumbers.forEach(n => {
+        const r = baseResults[Math.floor(Math.random() * baseResults.length)];
+        mapping[n] = r;
+    });
+    localStorage.setItem('mapping', JSON.stringify(mapping));
+}
+
+// Fata imibare yamaze gukoreshwa muri localStorage
+let usedNumbers = JSON.parse(localStorage.getItem('usedNumbers')) || [];
+let history = JSON.parse(localStorage.getItem('history')) || [];
+
+// Fata imibare yemewe (itarakoreshwa)
+let availableNumbers = allNumbers.filter(n => !usedNumbers.includes(n));
+
+// Fungura format y'itariki
+function formatDateTime(date){
+    const h = String(date.getHours()).padStart(2,'0');
+    const m = String(date.getMinutes()).padStart(2,'0');
+    const s = String(date.getSeconds()).padStart(2,'0');
+    const d = String(date.getDate()).padStart(2,'0');
+    const mo = String(date.getMonth()+1).padStart(2,'0');
+    const y = date.getFullYear();
+    return `${h}:${m}:${s} ${d}/${mo}/${y}`;
+}
+
+// Fungura render history
+function renderHistory() {
+    const historyList = document.getElementById('historyList');
+    historyList.innerHTML = '';
+    history.slice().reverse().forEach(h => { // reverse kugirango ibisubizo bishya hejuru
+        const li = document.createElement('li');
+        li.textContent = `${h.date} - Umubare: ${h.number}, Igisubizo: ${h.result} FRW`;
+        historyList.appendChild(li);
+    });
+}
+
+// Fungura check function
+function check(){
+    const input = parseFloat(document.getElementById("num").value);
+    const res = document.getElementById("res");
+
+    res.classList.remove("show");
+    res.classList.add("hide");
+
+    setTimeout(() => {
+        if(isNaN(input)){
+            res.style.color = "red";
+            res.textContent = "Shyiramo umubare wemewe";
+        } else if(usedNumbers.includes(input)){
+            res.style.color = "red";
+            res.textContent = "Uyu mubare wakoreshwe mbere kandi ntuzongera gukoreshwa";
+        } else if(availableNumbers.includes(input)){
+            const result = mapping[input];
+            res.style.color = "green";
+            res.textContent = result + " FRW";
+
+            usedNumbers.push(input);
+            localStorage.setItem('usedNumbers', JSON.stringify(usedNumbers));
+
+            const now = new Date();
+            history.push({number: input, result: result, date: formatDateTime(now)});
+            localStorage.setItem('history', JSON.stringify(history));
+
+            availableNumbers = availableNumbers.filter(n => n !== input);
+
+            renderHistory();
+        } else {
+            res.style.color = "red";
+            res.textContent = "Uyu mubare nturi mu rutonde";
+        }
+
+        res.classList.remove("hide");
+        res.classList.add("show");
+    }, 50);
+}
+
+// Fungura reset function
+function resetApp() {
+    if(confirm("Urashaka koko gusiba amateka yose?")){
+        localStorage.clear();
+        usedNumbers = [];
+        history = [];
+        availableNumbers = [...allNumbers];
+        mapping = {};
+        allNumbers.forEach(n => {
+            const r = baseResults[Math.floor(Math.random() * baseResults.length)];
+            mapping[n] = r;
+        });
+        localStorage.setItem('mapping', JSON.stringify(mapping));
+        renderHistory();
+        document.getElementById('res').textContent = "";
+    }
+}
+
+// Render history igihe page ibanza
+renderHistory();
+</script>
+
+</body>
+</html>
